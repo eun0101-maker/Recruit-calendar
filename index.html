@@ -199,6 +199,14 @@ th:first-child, td:first-child {
   box-shadow: 2px 0 4px var(--shade);
   overflow-wrap: anywhere;
 }
+/* 폰: 뒤집은 표. 기업 이름 줄은 위에, 날짜 칸은 왼쪽에 고정 */
+.flip { --col1: 60px; max-height: 74vh; max-height: 74dvh; overflow: auto; }
+.flip thead th { position: sticky; top: 0; z-index: 3; text-align: left; vertical-align: top; box-shadow: 0 2px 4px var(--shade); }
+.flip thead th:not(:first-child) { min-width: 108px; }
+.flip thead th:first-child { z-index: 4; text-align: center; vertical-align: middle; padding: 8px 4px; }
+.flip tbody th { text-align: center; padding: 8px 4px; }
+.flip tbody th.past { background: var(--past); }
+.flip tbody th.is-today { box-shadow: inset 3px 0 0 var(--today), 2px 0 4px var(--shade); }
 .co-name {
   display: block; width: 100%; min-height: 0; padding: 0; border: 0; background: none; text-align: left;
   color: var(--accent); font-weight: 600; font-size: .9rem; white-space: normal; overflow-wrap: anywhere;
@@ -986,6 +994,7 @@ function setResult(id, date, val) {
 }
 
 /* ---------- 표 ---------- */
+const mqPhone = window.matchMedia('(max-width: 640px)');   // 폰 폭에서는 표를 뒤집는다: 기업이 열, 날짜가 행
 function renderTable() {
   const empty = $('table-empty'), wrap = $('table-scroll');
   const visible = state.companies.filter((c) => !c.hidden);
@@ -1002,52 +1011,81 @@ function renderTable() {
   const set = new Set([today]);
   visible.forEach((c) => Object.keys(c.schedules).forEach((d) => set.add(d)));
   const dates = [...set].sort();
-
-  const headRow = $('table-head-row');
-  headRow.replaceChildren(h('th', { scope: 'col' }, '기업/직무'));
-  dates.forEach((ds) => {
-    const [y, m, d] = ds.split('-');
-    const label = y !== thisYear ? `${y.slice(2)}.${Number(m)}.${Number(d)}` : `${Number(m)}.${Number(d)}`;
-    const cls = [ds <= today ? 'past' : '', ds === today ? 'is-today' : ''].join(' ').trim();
-    headRow.append(h('th', { scope: 'col', class: cls || null, id: ds === today ? 'today-cell' : null },
-      label, h('span', { class: 'wd' }, ds === today ? '오늘' : WEEK[parseYmd(ds).getDay()])));
-  });
-
-  const rows = visible.slice().sort((a, b) => {
+  const companies = visible.slice().sort((a, b) => {
     const fa = finalDate(a), fb = finalDate(b);
     if (fa && fb) return fa.localeCompare(fb) || a.name.localeCompare(b.name);
     if (fa) return -1;
     if (fb) return 1;
     return a.name.localeCompare(b.name);
   });
-  const body = $('table-body');
-  body.replaceChildren();
-  rows.forEach((c) => {
+
+  const dateCell = (ds, scope) => {
+    const [y, m, d] = ds.split('-');
+    const label = y !== thisYear ? `${y.slice(2)}.${Number(m)}.${Number(d)}` : `${Number(m)}.${Number(d)}`;
+    const cls = [ds <= today ? 'past' : '', ds === today ? 'is-today' : ''].join(' ').trim();
+    return h('th', { scope, class: cls || null, id: ds === today ? 'today-cell' : null },
+      label, h('span', { class: 'wd' }, ds === today ? '오늘' : WEEK[parseYmd(ds).getDay()]));
+  };
+  const companyCell = (tag, c) => {
     const p = progress(c);
-    const tr = h('tr', null, h('td', null,
+    return h(tag, tag === 'th' ? { scope: 'col' } : null,
       h('button', { type: 'button', class: 'co-name', onclick: () => openSchedule(c.id) }, c.name),
       h('div', { class: 'co-job' }, c.job),
       p === null ? null : [
         h('div', { class: 'progress', role: 'img', 'aria-label': `진행률 ${p}%` }, h('i', { style: `width:${p}%` })),
         h('span', { class: 'progress-text' }, p + '%'),
-      ]));
+      ]);
+  };
+  const stageCell = (c, ds) => {
+    const td = h('td', { class: ds <= today ? 'past' : null });
+    const stage = c.schedules[ds];
+    if (stage) {
+      td.append(h('button', { type: 'button', class: 'badge ' + kind(stage), onclick: () => openSchedule(c.id) }, stage));
+      if (stage.includes('발표')) td.append(resultButtons(c, ds));
+    }
+    return td;
+  };
+
+  const flip = mqPhone.matches;
+  wrap.classList.toggle('flip', flip);
+  const headRow = $('table-head-row'), body = $('table-body');
+  body.replaceChildren();
+  if (flip) {
+    headRow.replaceChildren(h('th', { scope: 'col' }, '날짜'), ...companies.map((c) => companyCell('th', c)));
     dates.forEach((ds) => {
-      const td = h('td', { class: ds <= today ? 'past' : null });
-      const stage = c.schedules[ds];
-      if (stage) {
-        td.append(h('button', { type: 'button', class: 'badge ' + kind(stage), onclick: () => openSchedule(c.id) }, stage));
-        if (stage.includes('발표')) td.append(resultButtons(c, ds));
-      }
-      tr.append(td);
+      const tr = h('tr', null, dateCell(ds, 'row'));
+      companies.forEach((c) => tr.append(stageCell(c, ds)));
+      body.append(tr);
     });
+    fitTable();
+    return;
+  }
+  wrap.style.maxHeight = '';
+  headRow.replaceChildren(h('th', { scope: 'col' }, '기업/직무'), ...dates.map((ds) => dateCell(ds, 'col')));
+  companies.forEach((c) => {
+    const tr = h('tr', null, companyCell('td', c));
+    dates.forEach((ds) => tr.append(stageCell(c, ds)));
     body.append(tr);
   });
 }
 function scrollToToday() {
   const wrap = $('table-scroll'), cell = $('today-cell');
   if (!wrap || !cell || wrap.hidden) return;
+  const w = wrap.getBoundingClientRect(), c = cell.getBoundingClientRect();
+  if (wrap.classList.contains('flip')) {
+    const head = wrap.querySelector('thead');
+    wrap.scrollTop = Math.max(0, wrap.scrollTop + c.top - w.top - (head ? head.offsetHeight : 0));
+    return;
+  }
   const first = $('table-head-row').firstElementChild;
-  wrap.scrollLeft = Math.max(0, cell.offsetLeft - (first ? first.offsetWidth : 0));
+  wrap.scrollLeft = Math.max(0, wrap.scrollLeft + c.left - w.left - (first ? first.offsetWidth : 0));
+}
+/* 폰에서는 표가 화면의 남은 높이를 채우게 해서, 표 안에서만 위아래로 넘기면 되게 한다 */
+function fitTable() {
+  const wrap = $('table-scroll');
+  if (!wrap || wrap.hidden || !wrap.classList.contains('flip')) { if (wrap) wrap.style.maxHeight = ''; return; }
+  const top = wrap.getBoundingClientRect().top + window.scrollY;
+  wrap.style.maxHeight = Math.max(360, window.innerHeight - top - 12) + 'px';
 }
 
 /* ---------- 캘린더 ---------- */
@@ -1451,6 +1489,8 @@ $('btn-sync-now').addEventListener('click', () => { syncNow(true); toast('동기
 $('btn-disconnect').addEventListener('click', disconnect);
 window.addEventListener('online', () => syncNow(true));
 window.addEventListener('offline', updateSync);
+mqPhone.addEventListener('change', () => { renderTable(); requestAnimationFrame(scrollToToday); });
+window.addEventListener('resize', fitTable);
 window.addEventListener('focus', () => syncNow());
 document.addEventListener('visibilitychange', () => { if (!document.hidden) syncNow(); });
 setInterval(() => { if (!document.hidden) syncNow(); }, 10000);
