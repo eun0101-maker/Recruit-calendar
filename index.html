@@ -34,6 +34,7 @@
   --today-fg: #2a1a00;
   --past: #fdf8cf;
   --shade: rgba(20, 30, 50, .08);
+  --track: #dde4f1;
   --scrim: rgba(15, 20, 30, .45);
   --k-apply-bg: #e0f2fe;     --k-apply-fg: #0b5c8a;
   --k-doc-bg: #dbe6fe;       --k-doc-fg: #1e40af;
@@ -49,7 +50,7 @@
     --bg: #10131a; --surface: #181c25; --surface-2: #212633; --fg: #e7eaf1; --muted: #9aa4b8;
     --line: #2c3342; --accent: #6f9dff; --accent-fg: #0b1222; --accent-soft: #1b2a4a;
     --danger: #f07474; --danger-fg: #2a0808; --ok: #5fd08e; --today: #f5b041; --today-fg: #2a1a00;
-    --past: #2a2718; --shade: rgba(0, 0, 0, .35); --scrim: rgba(0, 0, 0, .6);
+    --past: #2a2718; --shade: rgba(0, 0, 0, .35); --scrim: rgba(0, 0, 0, .6); --track: #2b3446;
     --k-apply-bg: #10303f; --k-apply-fg: #93d4f2;
     --k-doc-bg: #1a2b54; --k-doc-fg: #adc6ff;
     --k-exam-bg: #3b2d10; --k-exam-fg: #f4c870;
@@ -63,7 +64,7 @@
   --bg: #10131a; --surface: #181c25; --surface-2: #212633; --fg: #e7eaf1; --muted: #9aa4b8;
   --line: #2c3342; --accent: #6f9dff; --accent-fg: #0b1222; --accent-soft: #1b2a4a;
   --danger: #f07474; --danger-fg: #2a0808; --ok: #5fd08e; --today: #f5b041; --today-fg: #2a1a00;
-  --past: #2a2718; --shade: rgba(0, 0, 0, .35); --scrim: rgba(0, 0, 0, .6);
+  --past: #2a2718; --shade: rgba(0, 0, 0, .35); --scrim: rgba(0, 0, 0, .6); --track: #2b3446;
   --k-apply-bg: #10303f; --k-apply-fg: #93d4f2;
   --k-doc-bg: #1a2b54; --k-doc-fg: #adc6ff;
   --k-exam-bg: #3b2d10; --k-exam-fg: #f4c870;
@@ -207,6 +208,41 @@ th:first-child, td:first-child {
 .flip tbody th { text-align: center; padding: 8px 4px; }
 .flip tbody th.past { background: var(--past); }
 .flip tbody th.is-today { box-shadow: inset 3px 0 0 var(--today), 2px 0 4px var(--shade); }
+/* 진행 막대: 지원일 칸 가운데에서 최종 발표일 칸 가운데까지, 칸마다 한 토막씩 이어 그린다 */
+tr.has-bar td { padding-top: 34px; }
+tr.has-bar td:first-child { padding-top: 8px; }
+td.has-bar { position: relative; }
+.pbar { position: absolute; left: var(--a); right: var(--b); top: 20px; height: 8px; background: var(--track); }
+.pbar i { display: block; height: 100%; width: var(--f); background: var(--accent); }
+.pbar.cap-s { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+.pbar.cap-e { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
+.pbar.cap-s i { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+.pbar-label { position: absolute; top: 3px; left: var(--x); transform: translateX(-50%); font-size: .7rem; font-weight: 700; color: var(--accent); white-space: nowrap; line-height: 1.2; }
+.flip tr.has-bar td { padding-top: 8px; }
+.flip td.col-bar { padding-left: 20px; }
+.flip .pbar { left: 7px; right: auto; width: 7px; height: auto; top: var(--a); bottom: var(--b); border-radius: 0; }
+.flip .pbar i { width: 100%; height: var(--f); border-radius: 0; }
+.flip .pbar.cap-s, .flip .pbar.cap-s i { border-radius: 4px 4px 0 0; }
+.flip .pbar.cap-e { border-radius: 0 0 4px 4px; }
+.flip .pbar.cap-s.cap-e { border-radius: 4px; }
+.flip .pbar-label { left: 17px; top: var(--x); transform: translateY(-50%); }
+.flip td.has-label { padding-left: 48px; }
+
+/* 결과 기록 */
+.res-summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.res-sum { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: .82rem; }
+.res-sum .nums { color: var(--muted); }
+.res-sum .nums b { color: var(--fg); font-weight: 600; }
+.res-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+.res-table th, .res-table td { min-width: 0; padding: 8px 6px; font-size: .82rem; }
+.res-table th:first-child, .res-table td:first-child { width: auto; min-width: 104px; max-width: 150px; }
+.res-table tr:last-child th, .res-table tr:last-child td { border-bottom: 0; }
+.res-table th:last-child, .res-table td:last-child { border-right: 0; }
+.res-table .last { white-space: nowrap; color: var(--muted); }
+.chip-res { display: inline-block; padding: 2px 7px; border-radius: 5px; font-size: .74rem; font-weight: 600; white-space: nowrap; }
+.chip-res.pass { background: var(--accent); color: var(--accent-fg); }
+.chip-res.fail { background: var(--danger); color: var(--danger-fg); }
+.dash { color: var(--muted); }
 .co-name {
   display: block; width: 100%; min-height: 0; padding: 0; border: 0; background: none; text-align: left;
   color: var(--accent); font-weight: 600; font-size: .9rem; white-space: normal; overflow-wrap: anywhere;
@@ -357,6 +393,7 @@ button.k-default:hover { background: var(--k-default-bg); }
     <span class="spacer"></span>
     <button type="button" id="btn-stages">채용 단계 편집</button>
     <button type="button" id="btn-history">지원 기록</button>
+    <button type="button" id="btn-results">결과 기록</button>
     <button type="button" id="btn-import">기록 가져오기</button>
     <button type="button" id="btn-sync">기기 연결</button>
   </nav>
@@ -423,6 +460,17 @@ button.k-default:hover { background: var(--k-default-bg); }
       <button type="submit" class="primary">추가</button>
     </form>
     <div class="modal-body" id="stages-list"></div>
+  </div>
+</div>
+
+<!-- 결과 기록 -->
+<div class="overlay" id="modal-results" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="results-title" style="max-width:720px">
+    <div class="modal-head">
+      <h3 id="results-title">결과 기록</h3>
+      <button type="button" class="icon" data-close aria-label="닫기">✕</button>
+    </div>
+    <div class="modal-body" id="results-list"></div>
   </div>
 </div>
 
@@ -931,6 +979,7 @@ function lockBody() {
 function openModal(id) {
   if (id === 'modal-stages') renderStages(true);
   if (id === 'modal-history') renderHistory();
+  if (id === 'modal-results') renderResults();
   if (id === 'modal-sync') renderSyncModal();
   $(id).hidden = false;
   lockBody();
@@ -955,18 +1004,22 @@ function finalDate(c) {
   const ds = Object.keys(c.schedules).filter((d) => c.schedules[d] === '최종 발표').sort();
   return ds.length ? ds[0] : null;
 }
-function progress(c) {
+/* 진행 기간: 지원일(지원 단계의 첫날) ~ 최종 발표일. 지원일이나 최종 발표일이 없으면 막대를 그리지 않는다. */
+const isApplyStage = (st) => st.includes('지원');
+const isFinalStage = (st) => st.includes('최종') && st.includes('발표');
+function progressSpan(c) {
   const all = Object.keys(c.schedules).sort();
-  const finals = all.filter((d) => c.schedules[d] === '최종 발표');
-  if (!finals.length) return null;
-  const applied = all.filter((d) => c.schedules[d] === '지원');
-  const start = applied.length ? applied[0] : all[0];
-  const end = finals[finals.length - 1];
+  const applied = all.filter((d) => isApplyStage(c.schedules[d]));
+  const finals = all.filter((d) => isFinalStage(c.schedules[d]));
+  if (!applied.length || !finals.length) return null;
+  const start = applied[0], end = finals[finals.length - 1];
   if (start >= end) return null;
-  const s = parseYmd(start).getTime(), e = parseYmd(end).getTime(), now = Date.now();
-  if (now < s) return 0;
-  if (now >= e) return 100;
-  return Math.floor(((now - s) / (e - s)) * 100);
+  const today = todayStr();
+  const s0 = parseYmd(start).getTime(), e0 = parseYmd(end).getTime(), t0 = parseYmd(today).getTime();
+  const pct = Math.max(0, Math.min(100, Math.floor(((t0 - s0) / (e0 - s0)) * 100)));
+  // 숫자를 붙일 칸: 오늘이 기간 안이면 오늘 칸, 기간 전이면 지원일 칸, 기간 뒤면 최종 발표일 칸
+  const labelAt = today < start ? start : today > end ? end : today;
+  return { start, end, pct, labelAt };
 }
 
 /* ---------- 합격/불합격 ---------- */
@@ -1026,18 +1079,31 @@ function renderTable() {
     return h('th', { scope, class: cls || null, id: ds === today ? 'today-cell' : null },
       label, h('span', { class: 'wd' }, ds === today ? '오늘' : WEEK[parseYmd(ds).getDay()]));
   };
-  const companyCell = (tag, c) => {
-    const p = progress(c);
-    return h(tag, tag === 'th' ? { scope: 'col' } : null,
-      h('button', { type: 'button', class: 'co-name', onclick: () => openSchedule(c.id) }, c.name),
-      h('div', { class: 'co-job' }, c.job),
-      p === null ? null : [
-        h('div', { class: 'progress', role: 'img', 'aria-label': `진행률 ${p}%` }, h('i', { style: `width:${p}%` })),
-        h('span', { class: 'progress-text' }, p + '%'),
-      ]);
+  const companyCell = (tag, c) => h(tag, tag === 'th' ? { scope: 'col' } : null,
+    h('button', { type: 'button', class: 'co-name', onclick: () => openSchedule(c.id) }, c.name),
+    h('div', { class: 'co-job' }, c.job));
+  const spans = new Map(visible.map((c) => [c.id, progressSpan(c)]));
+  const barPiece = (sp, ds) => {
+    if (!sp || ds < sp.start || ds > sp.end) return null;
+    const from = ds === sp.start ? 50 : 0, to = ds === sp.end ? 50 : 100;
+    const fillTo = ds < today ? 100 : ds === today ? 50 : 0;
+    const fillEnd = Math.max(from, Math.min(to, fillTo));
+    const f = to > from ? ((fillEnd - from) / (to - from)) * 100 : 0;
+    return h('span', {
+      class: 'pbar' + (ds === sp.start ? ' cap-s' : '') + (ds === sp.end ? ' cap-e' : ''),
+      style: `--a:${from}%;--b:${100 - to}%;--f:${f}%`, 'aria-hidden': 'true',
+    }, h('i'));
+  };
+  const barLabel = (sp, ds) => {
+    if (!sp || ds !== sp.labelAt) return null;
+    const x = ds === sp.start && ds !== today ? 50 : ds === sp.end && ds !== today ? 50 : 50;
+    return h('span', { class: 'pbar-label', style: `--x:${x}%`, title: `지원일 ${showDate(sp.start)} ~ 최종 발표 ${showDate(sp.end)}` }, sp.pct + '%');
   };
   const stageCell = (c, ds) => {
-    const td = h('td', { class: ds <= today ? 'past' : null });
+    const sp = spans.get(c.id);
+    const piece = barPiece(sp, ds), label = barLabel(sp, ds);
+    const cls = [ds <= today ? 'past' : '', piece || label ? 'has-bar' : '', sp ? 'col-bar' : '', label ? 'has-label' : ''].join(' ').trim();
+    const td = h('td', { class: cls || null }, piece, label);
     const stage = c.schedules[ds];
     if (stage) {
       td.append(h('button', { type: 'button', class: 'badge ' + kind(stage), onclick: () => openSchedule(c.id) }, stage));
@@ -1063,7 +1129,7 @@ function renderTable() {
   wrap.style.maxHeight = '';
   headRow.replaceChildren(h('th', { scope: 'col' }, '기업/직무'), ...dates.map((ds) => dateCell(ds, 'col')));
   companies.forEach((c) => {
-    const tr = h('tr', null, companyCell('td', c));
+    const tr = h('tr', { class: spans.get(c.id) ? 'has-bar' : null }, companyCell('td', c));
     dates.forEach((ds) => tr.append(stageCell(c, ds)));
     body.append(tr);
   });
@@ -1074,11 +1140,13 @@ function scrollToToday() {
   const w = wrap.getBoundingClientRect(), c = cell.getBoundingClientRect();
   if (wrap.classList.contains('flip')) {
     const head = wrap.querySelector('thead');
-    wrap.scrollTop = Math.max(0, wrap.scrollTop + c.top - w.top - (head ? head.offsetHeight : 0));
+    const hh = head ? head.offsetHeight : 0;
+    wrap.scrollTop = Math.max(0, wrap.scrollTop + c.top - w.top - hh);   // 폰: 오늘 줄을 기업 이름 바로 아래(맨 위)에
     return;
   }
   const first = $('table-head-row').firstElementChild;
-  wrap.scrollLeft = Math.max(0, wrap.scrollLeft + c.left - w.left - (first ? first.offsetWidth : 0));
+  const fw = first ? first.offsetWidth : 0, area = wrap.clientWidth - fw;
+  wrap.scrollLeft = Math.max(0, wrap.scrollLeft + (c.left + c.width / 2) - w.left - fw - area / 3);
 }
 /* 폰에서는 표가 화면의 남은 높이를 채우게 해서, 표 안에서만 위아래로 넘기면 되게 한다 */
 function fitTable() {
@@ -1370,6 +1438,61 @@ function renderHistory() {
   });
 }
 
+/* ---------- 결과 기록 ---------- */
+function shortDate(ds) {
+  const [y, m, d] = ds.split('-');
+  const base = y !== String(new Date().getFullYear()) ? `${y.slice(2)}.${Number(m)}.${Number(d)}` : `${Number(m)}.${Number(d)}`;
+  return `${base} (${WEEK[parseYmd(ds).getDay()]})`;
+}
+function resultStages() {
+  const list = state.stages.filter((st) => st.includes('발표'));
+  state.companies.forEach((c) => Object.keys(c.results).forEach((d) => {
+    const st = c.schedules[d];
+    if (st && !list.includes(st)) list.push(st);
+  }));
+  return list;
+}
+function renderResults() {
+  const box = $('results-list');
+  box.replaceChildren();
+  const stages = resultStages();
+  const rows = state.companies.map((c) => {
+    const by = {}; let last = null;
+    Object.keys(c.results).sort().forEach((d) => {
+      const st = c.schedules[d];
+      if (!st) return;
+      by[st] = { r: c.results[d], d };
+      if (!last || d > last) last = d;
+    });
+    return last ? { c, by, last } : null;
+  }).filter(Boolean).sort((a, b) => b.last.localeCompare(a.last) || a.c.name.localeCompare(b.c.name));
+  if (!rows.length) {
+    box.append(h('p', { class: 'muted' }, '아직 합격이나 불합격을 입력한 기업이 없습니다. 표나 캘린더에서 발표 일정의 합격·불합격 버튼을 누르면 여기에 모입니다.'));
+    return;
+  }
+  const label = (st) => st.replace(/\s*발표$/, '') || st;
+  box.append(h('div', { class: 'res-summary' }, stages.map((st) => {
+    const pass = rows.filter((r) => r.by[st] && r.by[st].r === 'pass').length;
+    const fail = rows.filter((r) => r.by[st] && r.by[st].r === 'fail').length;
+    return h('div', { class: 'res-sum' },
+      h('span', null, h('span', { class: 'badge ' + kind(st) }, label(st))),
+      h('span', { class: 'nums' }, '합격 ', h('b', null, pass), ' · 불합격 ', h('b', null, fail)));
+  })));
+  box.append(h('div', { class: 'res-wrap' }, h('table', { class: 'res-table' },
+    h('thead', null, h('tr', null,
+      h('th', { scope: 'col' }, '기업/직무'),
+      stages.map((st) => h('th', { scope: 'col' }, label(st))),
+      h('th', { scope: 'col' }, '마지막 발표일'))),
+    h('tbody', null, rows.map((r) => h('tr', null,
+      h('td', null,
+        h('button', { type: 'button', class: 'co-name', onclick: () => { closeModal('modal-results'); openSchedule(r.c.id); } }, r.c.name),
+        h('div', { class: 'co-job' }, r.c.job)),
+      stages.map((st) => h('td', null, r.by[st]
+        ? h('span', { class: 'chip-res ' + r.by[st].r, title: showDateLong(r.by[st].d) }, r.by[st].r === 'pass' ? '합격' : '불합격')
+        : h('span', { class: 'dash', 'aria-label': '결과 없음' }, '–'))),
+      h('td', { class: 'last' }, shortDate(r.last))))))));
+}
+
 /* ---------- 기록 가져오기 ---------- */
 let importData = null;
 function readImport(text) {
@@ -1440,6 +1563,7 @@ function renderAll() {
   renderTable();
   if (state.view === 'calendar') renderCalendar();
   if (isOpen('modal-history')) renderHistory();
+  if (isOpen('modal-results')) renderResults();
   if (isOpen('modal-stages')) renderStages(false);
   if (isOpen('modal-schedule') && state.targetId && !findCompany(state.targetId)) closeModal('modal-schedule');
   updateSync();
@@ -1452,6 +1576,7 @@ $('btn-view-calendar').addEventListener('click', () => switchView('calendar'));
 $('btn-today').addEventListener('click', goToday);
 $('btn-stages').addEventListener('click', () => openModal('modal-stages'));
 $('btn-history').addEventListener('click', () => openModal('modal-history'));
+$('btn-results').addEventListener('click', () => openModal('modal-results'));
 $('btn-import').addEventListener('click', () => { openModal('modal-import'); onImportInput(); });
 $('btn-prev').addEventListener('click', () => changeMonth(-1));
 $('btn-next').addEventListener('click', () => changeMonth(1));
