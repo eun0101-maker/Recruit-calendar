@@ -242,6 +242,7 @@ td.has-bar { position: relative; }
 .chip-res { display: inline-block; padding: 2px 7px; border-radius: 5px; font-size: .74rem; font-weight: 600; white-space: nowrap; }
 .chip-res.pass { background: var(--accent); color: var(--accent-fg); }
 .chip-res.fail { background: var(--danger); color: var(--danger-fg); }
+.chip-res.hire { background: var(--ok); color: var(--accent-fg); }
 .dash { color: var(--muted); }
 .co-name {
   display: block; width: 100%; min-height: 0; padding: 0; border: 0; background: none; text-align: left;
@@ -392,7 +393,6 @@ button.k-default:hover { background: var(--k-default-bg); }
     <button type="button" class="today-btn" id="btn-today">오늘</button>
     <span class="spacer"></span>
     <button type="button" id="btn-stages">채용 단계 편집</button>
-    <button type="button" id="btn-history">지원 기록</button>
     <button type="button" id="btn-results">결과 기록</button>
     <button type="button" id="btn-import">기록 가져오기</button>
     <button type="button" id="btn-sync">기기 연결</button>
@@ -434,6 +434,7 @@ button.k-default:hover { background: var(--k-default-bg); }
     <div class="modal-head">
       <div class="ttl">
         <h3 id="schedule-title">채용 일정</h3>
+        <button type="button" class="sm" id="btn-restore-company" hidden>표에 다시 보이기</button>
         <button type="button" class="danger sm" id="btn-delete-company">기업 삭제</button>
       </div>
       <button type="button" class="icon" data-close aria-label="닫기">✕</button>
@@ -471,17 +472,6 @@ button.k-default:hover { background: var(--k-default-bg); }
       <button type="button" class="icon" data-close aria-label="닫기">✕</button>
     </div>
     <div class="modal-body" id="results-list"></div>
-  </div>
-</div>
-
-<!-- 지원 기록 -->
-<div class="overlay" id="modal-history" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="history-title">
-    <div class="modal-head">
-      <h3 id="history-title">전체 지원 기록</h3>
-      <button type="button" class="icon" data-close aria-label="닫기">✕</button>
-    </div>
-    <div class="modal-body" id="history-list"></div>
   </div>
 </div>
 
@@ -978,7 +968,6 @@ function lockBody() {
 }
 function openModal(id) {
   if (id === 'modal-stages') renderStages(true);
-  if (id === 'modal-history') renderHistory();
   if (id === 'modal-results') renderResults();
   if (id === 'modal-sync') renderSyncModal();
   $(id).hidden = false;
@@ -1022,6 +1011,15 @@ function progressSpan(c) {
   return { start, end, pct, labelAt };
 }
 
+/* 임용: 임용 단계 날짜(기간이면 마지막 날)가 지나면 채용이 끝난 것으로 보고 표에서 빼서 결과 기록에 넣는다 */
+const isHireStage = (st) => st.includes('임용');
+function hireDate(c) {
+  const ds = Object.keys(c.schedules).filter((d) => isHireStage(c.schedules[d])).sort();
+  return ds.length ? ds[ds.length - 1] : null;
+}
+function isFinished(c) { const d = hireDate(c); return !!d && d < todayStr(); }
+const inTable = (c) => !c.hidden && !isFinished(c);
+
 /* ---------- 합격/불합격 ---------- */
 function resultButtons(c, date) {
   const r = c.results[date];
@@ -1042,7 +1040,7 @@ function setResult(id, date, val) {
   if (val === 'fail') c.hidden = failed;
   putCompany(c);
   if (val === 'fail' && c.hidden && !before.hidden) {
-    toast(`‘${c.name}’ 항목을 표에서 숨겼습니다. 지원 기록에서 다시 꺼낼 수 있습니다.`, '되돌리기', () => putCompany(before));
+    toast(`‘${c.name}’ 항목을 표에서 숨겼습니다. 결과 기록에서 볼 수 있습니다.`, '되돌리기', () => putCompany(before));
   }
 }
 
@@ -1050,10 +1048,10 @@ function setResult(id, date, val) {
 const mqPhone = window.matchMedia('(max-width: 640px)');   // 폰 폭에서는 표를 뒤집는다: 기업이 열, 날짜가 행
 function renderTable() {
   const empty = $('table-empty'), wrap = $('table-scroll');
-  const visible = state.companies.filter((c) => !c.hidden);
+  const visible = state.companies.filter(inTable);
   if (!state.loaded || !visible.length) {
     wrap.hidden = true; empty.hidden = false;
-    if (state.companies.length) empty.replaceChildren(h('strong', null, '표에 보이는 기업이 없습니다'), '불합격으로 표시한 기업은 지원 기록에서 확인하고 다시 꺼낼 수 있습니다.');
+    if (state.companies.length) empty.replaceChildren(h('strong', null, '표에 보이는 기업이 없습니다'), '불합격으로 표시했거나 임용일이 지난 기업은 결과 기록에서 볼 수 있습니다.');
     else empty.replaceChildren(h('strong', null, '아직 등록한 기업이 없습니다'), '위 칸에 기업명과 직무를 입력해 첫 일정을 추가하세요. 노트북에서 쓰던 기록은 ‘기록 가져오기’로 옮길 수 있습니다.');
     return;
   }
@@ -1185,7 +1183,7 @@ function renderCalendar() {
       onclick: () => { state.selectedDay = ds; renderCalendar(); },
     }, h('span', { class: 'day-num' + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '') }, day));
     evs.slice(0, 3).forEach(({ c, stage }) => {
-      cell.append(h('span', { class: 'chip ' + kind(stage) + (c.hidden ? ' dim' : '') },
+      cell.append(h('span', { class: 'chip ' + kind(stage) + (!inTable(c) ? ' dim' : '') },
         h('span', { class: 'nm' }, c.name), h('span', { class: 'st' }, '-' + stage)));
     });
     if (evs.length > 3) cell.append(h('span', { class: 'more' }, `+${evs.length - 3}`));
@@ -1206,7 +1204,7 @@ function renderDayPanel() {
       h('span', { class: 'badge ' + kind(stage) }, stage),
       h('div', { class: 'who' },
         h('button', { type: 'button', class: 'co-name', onclick: () => openSchedule(c.id) }, c.name),
-        h('div', { class: 'co-job' }, c.job + (c.hidden ? ' · 표에서 숨김' : ''))),
+        h('div', { class: 'co-job' }, c.job + (c.hidden ? ' · 표에서 숨김' : isFinished(c) ? ' · 임용 완료' : ''))),
       stage.includes('발표') ? resultButtons(c, ds) : null));
   });
 }
@@ -1253,7 +1251,7 @@ function addCompany(ev) {
 async function deleteCompany(id) {
   const c = findCompany(id);
   if (!c || !canWrite()) return false;
-  const ok = await askConfirm(`‘${c.name} (${c.job})’ 기록을 삭제할까요? 지원 기록에서도 완전히 지워집니다.`, '삭제');
+  const ok = await askConfirm(`‘${c.name} (${c.job})’ 기록을 삭제할까요? 결과 기록에서도 완전히 지워집니다.`, '삭제');
   if (!ok) return false;
   removeCompany(id);
   return true;
@@ -1269,6 +1267,7 @@ function openSchedule(id) {
   $('schedule-error').hidden = true;
   $('btn-save-schedule').disabled = !canWrite();
   $('btn-delete-company').disabled = !canWrite();
+  $('btn-restore-company').hidden = !c.hidden;
   const byStage = {};
   Object.keys(c.schedules).sort().forEach((d) => { (byStage[c.schedules[d]] = byStage[c.schedules[d]] || []).push(d); });
   const list = $('schedule-list');
@@ -1398,50 +1397,6 @@ function deleteStage(i) {
   toast(`‘${gone}’ 단계를 삭제했습니다.`, '되돌리기', () => { putStages(before); renderStages(true); });
 }
 
-/* ---------- 지원 기록 ---------- */
-const openRecords = new Set();
-function spans(c) {
-  const out = [];
-  Object.keys(c.schedules).sort().forEach((d) => {
-    const stage = c.schedules[d], result = c.results[d];
-    const last = out[out.length - 1];
-    if (last && last.stage === stage && !result && !last.result && nextDay(last.end) === d) last.end = d;
-    else out.push({ start: d, end: d, stage, result });
-  });
-  return out;
-}
-function renderHistory() {
-  const list = $('history-list');
-  list.replaceChildren();
-  if (!state.companies.length) {
-    list.append(h('p', { class: 'muted', style: 'text-align:center' }, state.loaded ? '기록된 기업이 없습니다.' : '기록을 불러오는 중입니다.'));
-    return;
-  }
-  const off = !canWrite();
-  state.companies.forEach((c) => {
-    const body = h('div', { class: 'rec-body', hidden: !openRecords.has(c.id) }, h('strong', null, '전체 일정'));
-    const sp = spans(c);
-    if (!sp.length) body.append(h('span', null, '등록된 일정이 없습니다.'));
-    sp.forEach((s) => {
-      const when = s.start === s.end ? showDateLong(s.start) : `${showDateLong(s.start)} ~ ${showDateLong(s.end)}`;
-      const res = s.result ? ` (${s.result === 'pass' ? '합격' : '불합격'})` : '';
-      body.append(h('span', null, `${when} : ${s.stage}${res}`));
-    });
-    const title = h('button', { type: 'button', class: 'rec-title', 'aria-expanded': String(openRecords.has(c.id)), onclick: () => {
-      if (openRecords.has(c.id)) openRecords.delete(c.id); else openRecords.add(c.id);
-      body.hidden = !openRecords.has(c.id);
-      title.setAttribute('aria-expanded', String(openRecords.has(c.id)));
-    } }, h('strong', null, c.name), ` (${c.job})`, c.hidden ? h('span', { class: 'tag' }, ' [불합격/숨겨짐]') : null);
-    list.append(h('div', { class: 'rec' },
-      h('div', { class: 'rec-head' }, title,
-        h('div', { class: 'row' },
-          c.hidden ? h('button', { type: 'button', class: 'sm', disabled: off, onclick: () => { const n = cloneCompany(c); n.hidden = false; putCompany(n); } }, '표 보기 복구') : null,
-          h('button', { type: 'button', class: 'sm', disabled: off, onclick: () => { closeModal('modal-history'); openSchedule(c.id); } }, '일정 수정'),
-          h('button', { type: 'button', class: 'sm danger', disabled: off, onclick: () => deleteCompany(c.id) }, '삭제'))),
-      body));
-  });
-}
-
 /* ---------- 결과 기록 ---------- */
 function shortDate(ds) {
   const [y, m, d] = ds.split('-');
@@ -1468,12 +1423,15 @@ function renderResults() {
       by[st] = { r: c.results[d], d };
       if (!last || d > last) last = d;
     });
-    return last ? { c, by, last } : null;
+    const hire = isFinished(c) ? hireDate(c) : null;
+    if (hire && (!last || hire > last)) last = hire;
+    return last ? { c, by, last, hire } : null;
   }).filter(Boolean).sort((a, b) => b.last.localeCompare(a.last) || a.c.name.localeCompare(b.c.name));
   if (!rows.length) {
-    box.append(h('p', { class: 'muted' }, '아직 합격이나 불합격을 입력한 기업이 없습니다. 표나 캘린더에서 발표 일정의 합격·불합격 버튼을 누르면 여기에 모입니다.'));
+    box.append(h('p', { class: 'muted' }, '아직 결과가 나온 기업이 없습니다. 발표 일정에서 합격·불합격을 누르거나 임용일이 지나면 여기에 모입니다.'));
     return;
   }
+  const hires = rows.filter((r) => r.hire);
   const label = (st) => st.replace(/\s*발표$/, '') || st;
   box.append(h('div', { class: 'res-summary' }, stages.map((st) => {
     const pass = rows.filter((r) => r.by[st] && r.by[st].r === 'pass').length;
@@ -1481,11 +1439,14 @@ function renderResults() {
     return h('div', { class: 'res-sum' },
       h('span', null, h('span', { class: 'badge ' + kind(st) }, label(st))),
       h('span', { class: 'nums' }, '합격 ', h('b', null, pass), ' · 불합격 ', h('b', null, fail)));
-  })));
+  }), hires.length ? h('div', { class: 'res-sum' },
+    h('span', null, h('span', { class: 'badge k-final' }, '임용')),
+    h('span', { class: 'nums' }, '임용 완료 ', h('b', null, hires.length))) : null));
   box.append(h('div', { class: 'res-wrap' }, h('table', { class: 'res-table' },
     h('thead', null, h('tr', null,
       h('th', { scope: 'col' }, '기업/직무'),
-      stages.map((st) => h('th', { scope: 'col' }, label(st))))),
+      stages.map((st) => h('th', { scope: 'col' }, label(st))),
+      hires.length ? h('th', { scope: 'col' }, '임용') : null)),
     h('tbody', null, rows.map((r) => h('tr', null,
       h('td', null,
         h('button', { type: 'button', class: 'co-name', onclick: () => { closeModal('modal-results'); openSchedule(r.c.id); } }, r.c.name),
@@ -1494,7 +1455,10 @@ function renderResults() {
         ? h('div', { class: 'res-cell' },
             h('span', { class: 'res-date' }, shortDate(r.by[st].d)),
             h('span', { class: 'chip-res ' + r.by[st].r }, r.by[st].r === 'pass' ? '합격' : '불합격'))
-        : h('span', { class: 'dash', 'aria-label': '결과 없음' }, '–')))))))));
+        : h('span', { class: 'dash', 'aria-label': '결과 없음' }, '–'))),
+      hires.length ? h('td', null, r.hire
+        ? h('div', { class: 'res-cell' }, h('span', { class: 'res-date' }, shortDate(r.hire)), h('span', { class: 'chip-res hire' }, '임용'))
+        : h('span', { class: 'dash', 'aria-label': '임용 전' }, '–')) : null))))));
 }
 
 /* ---------- 기록 가져오기 ---------- */
@@ -1566,7 +1530,6 @@ function renderAll() {
   renderNotice();
   renderTable();
   if (state.view === 'calendar') renderCalendar();
-  if (isOpen('modal-history')) renderHistory();
   if (isOpen('modal-results')) renderResults();
   if (isOpen('modal-stages')) renderStages(false);
   if (isOpen('modal-schedule') && state.targetId && !findCompany(state.targetId)) closeModal('modal-schedule');
@@ -1579,8 +1542,15 @@ $('btn-view-table').addEventListener('click', () => switchView('table'));
 $('btn-view-calendar').addEventListener('click', () => switchView('calendar'));
 $('btn-today').addEventListener('click', goToday);
 $('btn-stages').addEventListener('click', () => openModal('modal-stages'));
-$('btn-history').addEventListener('click', () => openModal('modal-history'));
 $('btn-results').addEventListener('click', () => openModal('modal-results'));
+$('btn-restore-company').addEventListener('click', () => {
+  const c = findCompany(state.targetId);
+  if (!c) return;
+  const n = cloneCompany(c); n.hidden = false;
+  putCompany(n);
+  $('btn-restore-company').hidden = true;
+  toast(`‘${c.name}’을(를) 표에 다시 보이게 했습니다.`);
+});
 $('btn-import').addEventListener('click', () => { openModal('modal-import'); onImportInput(); });
 $('btn-prev').addEventListener('click', () => changeMonth(-1));
 $('btn-next').addEventListener('click', () => changeMonth(1));
