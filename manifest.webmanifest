@@ -1,6 +1,6 @@
 {
- "name": "채용 일정 관리",
- "short_name": "채용 일정",
+ "name": "취준 일정 관리",
+ "short_name": "취준 일정",
  "lang": "ko",
  "start_url": "./",
  "scope": "./",

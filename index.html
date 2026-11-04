@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>채용 일정 관리</title>
+<title>취준 일정 관리</title>
 <meta name="theme-color" content="#f4f6fa" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#10131a" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="채용 일정">
+<meta name="apple-mobile-web-app-title" content="취준 일정">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="robots" content="noindex">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -244,6 +244,22 @@ td.has-bar { position: relative; }
 .chip-res.fail { background: var(--danger); color: var(--danger-fg); }
 .chip-res.hire { background: var(--ok); color: var(--accent-fg); }
 .dash { color: var(--muted); }
+/* 채용/시험 선택, 창 안의 탭 */
+.add .type-seg { flex: none; }
+.add .type-seg button { min-width: 64px; }
+.tabs { align-self: flex-start; }
+.tabs button { min-width: 96px; }
+.co-job .kind-tag { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--k-exam-bg); color: var(--k-exam-fg); font-size: .72rem; font-weight: 600; }
+/* 시험 결과 입력 */
+.res-entry { min-height: 28px; padding: 2px 10px; font-size: .74rem; border-color: var(--accent); color: var(--accent); background: var(--surface); }
+.res-done { min-height: 28px; padding: 3px 6px; display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; white-space: normal; background: var(--surface); }
+.res-score { font-size: .76rem; font-weight: 600; }
+.res-score.unknown { color: var(--muted); font-weight: 500; }
+.choice { display: flex; gap: 6px; flex-wrap: wrap; font-weight: 400; }
+.choice label { flex: 1 1 0; min-width: 80px; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.choice label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: .86rem; cursor: pointer; }
+.modal-foot #btn-result-clear { margin-right: auto; }
 .co-name {
   display: block; width: 100%; min-height: 0; padding: 0; border: 0; background: none; text-align: left;
   color: var(--accent); font-weight: 600; font-size: .9rem; white-space: normal; overflow-wrap: anywhere;
@@ -364,6 +380,8 @@ button.k-default:hover { background: var(--k-default-bg); }
   input[type="text"], input[type="password"], textarea { font-size: 16px; min-height: 42px; }
   th, td { min-width: 78px; padding: 8px 4px; }
   .add button { flex: 1 1 100%; }
+  .add .type-seg { flex: 1 1 100%; }
+  .add .type-seg button { flex: 1 1 0; }
   .spacer { display: none; }
   .cal-cell { min-height: 68px; padding: 3px 2px; }
   .chip .st { display: none; }
@@ -381,7 +399,7 @@ button.k-default:hover { background: var(--k-default-bg); }
 
 <div class="app">
   <header class="top">
-    <h1>채용 일정 관리</h1>
+    <h1>취준 일정 관리</h1>
     <div class="sync" id="sync" data-state="local" role="status"><span class="dot"></span><span>이 기기에만 저장</span></div>
   </header>
 
@@ -392,15 +410,18 @@ button.k-default:hover { background: var(--k-default-bg); }
     </div>
     <button type="button" class="today-btn" id="btn-today">오늘</button>
     <span class="spacer"></span>
-    <button type="button" id="btn-stages">채용 단계 편집</button>
+    <button type="button" id="btn-stages">단계 편집</button>
     <button type="button" id="btn-results">결과 기록</button>
-    <button type="button" id="btn-import">기록 가져오기</button>
     <button type="button" id="btn-sync">기기 연결</button>
   </nav>
 
   <div class="notice" id="notice" hidden></div>
 
   <form class="add" id="form-add" autocomplete="off">
+    <div class="seg type-seg" role="group" aria-label="추가할 종류">
+      <button type="button" id="type-job" aria-pressed="true">채용</button>
+      <button type="button" id="type-exam" aria-pressed="false">시험</button>
+    </div>
     <input type="text" id="input-company" placeholder="기업명 (예: A기업)" aria-label="기업명" enterkeyhint="next">
     <input type="text" id="input-job" placeholder="직무 (예: 인턴)" aria-label="직무" enterkeyhint="done">
     <button type="submit" class="primary" id="btn-add">기업 및 직무 추가</button>
@@ -435,7 +456,7 @@ button.k-default:hover { background: var(--k-default-bg); }
       <div class="ttl">
         <h3 id="schedule-title">채용 일정</h3>
         <button type="button" class="sm" id="btn-restore-company" hidden>표에 다시 보이기</button>
-        <button type="button" class="danger sm" id="btn-delete-company">기업 삭제</button>
+        <button type="button" class="danger sm" id="btn-delete-company">삭제</button>
       </div>
       <button type="button" class="icon" data-close aria-label="닫기">✕</button>
     </div>
@@ -453,11 +474,15 @@ button.k-default:hover { background: var(--k-default-bg); }
 <div class="overlay" id="modal-stages" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="stages-title">
     <div class="modal-head">
-      <h3 id="stages-title">채용 단계 편집</h3>
+      <h3 id="stages-title">단계 편집</h3>
       <button type="button" class="icon" data-close aria-label="닫기">✕</button>
     </div>
+    <div class="seg tabs" role="group" aria-label="편집할 단계">
+      <button type="button" id="stab-job" aria-pressed="true">채용 단계</button>
+      <button type="button" id="stab-exam" aria-pressed="false">시험 단계</button>
+    </div>
     <form class="row" id="form-stage" autocomplete="off">
-      <input type="text" id="input-new-stage" placeholder="새 채용 단계 이름" aria-label="새 채용 단계 이름">
+      <input type="text" id="input-new-stage" placeholder="새 채용 단계 이름" aria-label="새 단계 이름">
       <button type="submit" class="primary">추가</button>
     </form>
     <div class="modal-body" id="stages-list"></div>
@@ -471,23 +496,40 @@ button.k-default:hover { background: var(--k-default-bg); }
       <h3 id="results-title">결과 기록</h3>
       <button type="button" class="icon" data-close aria-label="닫기">✕</button>
     </div>
+    <div class="seg tabs" role="group" aria-label="결과 종류">
+      <button type="button" id="rtab-job" aria-pressed="true">채용 결과</button>
+      <button type="button" id="rtab-exam" aria-pressed="false">시험 결과</button>
+    </div>
     <div class="modal-body" id="results-list"></div>
   </div>
 </div>
 
-<!-- 기록 가져오기 -->
-<div class="overlay" id="modal-import" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="import-title">
+<!-- 시험 결과 입력 -->
+<div class="overlay" id="modal-result" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="result-title" style="max-width:440px">
     <div class="modal-head">
-      <h3 id="import-title">기록 가져오기</h3>
+      <h3 id="result-title">결과 입력</h3>
       <button type="button" class="icon" data-close aria-label="닫기">✕</button>
     </div>
-    <p class="hint">노트북에서 쓰던 기록을 옮깁니다. 함께 받은 <b>채용일정_내보내기.html</b>을 노트북에서 열어 <b>기록 복사</b>를 누른 다음, 아래 칸에 붙여넣으세요. 같은 기업은 덮어쓰고, 나머지는 그대로 둡니다.</p>
-    <textarea id="import-text" aria-label="내보낸 기록 붙여넣기" placeholder="여기에 붙여넣기" spellcheck="false"></textarea>
-    <p class="hint" id="import-status"></p>
+    <div class="modal-body">
+      <p class="hint" id="result-sub"></p>
+      <div class="field">결과
+        <div class="choice" role="radiogroup" aria-label="결과">
+          <label><input type="radio" name="result-kind" value="pass"> 합격</label>
+          <label><input type="radio" name="result-kind" value="fail"> 불합격</label>
+          <label><input type="radio" name="result-kind" value="none"> 점수만</label>
+        </div>
+      </div>
+      <label class="field">점수
+        <input type="text" id="result-score" placeholder="예: 85, 72.5/100, B등급" maxlength="40" autocomplete="off">
+      </label>
+      <label class="check"><input type="checkbox" id="result-unknown"> 확인 불가</label>
+      <p class="err" id="result-error" hidden></p>
+    </div>
     <div class="modal-foot">
+      <button type="button" class="danger" id="btn-result-clear" hidden>결과 지우기</button>
       <button type="button" data-close>취소</button>
-      <button type="button" class="primary" id="btn-do-import" disabled>가져오기</button>
+      <button type="button" class="primary" id="btn-result-save">저장</button>
     </div>
   </div>
 </div>
@@ -550,6 +592,7 @@ button.k-default:hover { background: var(--k-default-bg); }
 'use strict';
 
 const DEFAULT_STAGES = ['지원', '서류 발표', '필기', '필기 발표', '면접', '최종 발표', '임용예정'];
+const DEFAULT_EXAM_STAGES = ['원서접수', '1차 필기', '필기(1) 결과 발표', '2차 필기', '필기(2) 결과 발표', '실기/면접', '최종 결과 발표'];
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 const ID_OK = /^[A-Za-z0-9_\-.~:@+]{1,200}$/;
 const DATE_OK = /^\d{4}-\d{2}-\d{2}$/;
@@ -612,6 +655,10 @@ function parseInput(raw) {
 const LS = { cfg: 'rc_cfg', data: 'rc_data', meta: 'rc_meta' };
 const state = {
   stages: DEFAULT_STAGES.slice(),
+  examStages: DEFAULT_EXAM_STAGES.slice(),
+  addType: 'job',
+  stageTab: 'job',
+  resultTab: 'job',
   companies: [],
   loaded: true,
   readOnly: false,
@@ -647,11 +694,16 @@ function normalizeCompany(id, d) {
     for (const [k, v] of Object.entries(d.schedules)) if (DATE_OK.test(k) && typeof v === 'string' && v) schedules[k] = v;
   }
   if (d.results && typeof d.results === 'object') {
-    for (const [k, v] of Object.entries(d.results)) if (DATE_OK.test(k) && (v === 'pass' || v === 'fail')) results[k] = v;
+    for (const [k, v] of Object.entries(d.results)) {
+      if (!DATE_OK.test(k)) continue;
+      if (v === 'pass' || v === 'fail') results[k] = v;
+      else { const r = cleanExamResult(v); if (r) results[k] = r; }
+    }
   }
   const fromId = Number((String(id).match(/\d{10,}/) || [])[0]);
   return {
     id: String(id),
+    type: d.type === 'exam' ? 'exam' : 'job',
     name: typeof d.name === 'string' ? d.name : '',
     job: typeof d.job === 'string' ? d.job : '',
     hidden: !!d.hidden,
@@ -659,7 +711,18 @@ function normalizeCompany(id, d) {
     createdAt: typeof d.createdAt === 'number' ? d.createdAt : (fromId || 0),
   };
 }
-const toDoc = (c) => ({ name: c.name, job: c.job, hidden: c.hidden, schedules: c.schedules, results: c.results, createdAt: c.createdAt });
+const toDoc = (c) => ({ type: c.type || 'job', name: c.name, job: c.job, hidden: c.hidden, schedules: c.schedules, results: c.results, createdAt: c.createdAt });
+function cleanExamResult(v) {
+  if (!v || typeof v !== 'object') return null;
+  const r = ['pass', 'fail', 'none'].includes(v.r) ? v.r : null;
+  if (!r) return null;
+  const u = !!v.u;
+  return { r, s: u ? '' : (typeof v.s === 'string' ? v.s.trim().slice(0, 40) : ''), u };
+}
+const resultKind = (v) => (typeof v === 'string' ? v : v && v.r);
+const stagesFor = (c) => (c.type === 'exam' ? state.examStages : state.stages);
+const subLabel = (c) => (c.type === 'exam' ? h('span', { class: 'kind-tag' }, '시험') : c.job);
+const fullName = (c) => (c.type === 'exam' || !c.job ? c.name : `${c.name} (${c.job})`);
 function sortCompanies(list) {
   return list.sort((a, b) => (a.createdAt - b.createdAt) || a.id.localeCompare(b.id));
 }
@@ -670,8 +733,9 @@ const newId = () => 'c_' + Date.now() + Math.random().toString(36).slice(2, 6);
 /* ---------- 저장: 이 기기 + GitHub 저장소 ---------- */
 function cleanData(raw) {
   raw = raw && typeof raw === 'object' ? raw : {};
-  const out = { stages: null, companies: {}, deleted: {} };
+  const out = { stages: null, examStages: null, companies: {}, deleted: {} };
   if (raw.stages && Array.isArray(raw.stages.list)) out.stages = { list: cleanStages(raw.stages.list), t: Number(raw.stages.t) || 0 };
+  if (raw.examStages && Array.isArray(raw.examStages.list)) out.examStages = { list: cleanStages(raw.examStages.list), t: Number(raw.examStages.t) || 0 };
   if (raw.companies && typeof raw.companies === 'object') {
     for (const [id, d] of Object.entries(raw.companies)) {
       if (!ID_OK.test(id) || !d || typeof d !== 'object') continue;
@@ -692,8 +756,10 @@ function canon(v) {
 }
 /* 기업마다, 그리고 단계 목록마다 더 나중에 고친 쪽을 남긴다. 삭제는 삭제 시각으로 비교한다. */
 function mergeData(a, b) {
-  const out = { stages: null, companies: {}, deleted: {} };
-  out.stages = !a.stages ? b.stages : !b.stages ? a.stages : (b.stages.t > a.stages.t ? b.stages : a.stages);
+  const out = { stages: null, examStages: null, companies: {}, deleted: {} };
+  const newer = (x, y) => !x ? (y || null) : !y ? x : (y.t > x.t ? y : x);
+  out.stages = newer(a.stages, b.stages);
+  out.examStages = newer(a.examStages, b.examStages);
   const ids = new Set([...Object.keys(a.companies), ...Object.keys(b.companies), ...Object.keys(a.deleted), ...Object.keys(b.deleted)]);
   const cutoff = Date.now() - 180 * 86400000;
   for (const id of ids) {
@@ -708,6 +774,7 @@ function mergeData(a, b) {
 function derive() {
   state.companies = sortCompanies(Object.entries(data.companies).map(([id, d]) => normalizeCompany(id, d)));
   state.stages = data.stages ? data.stages.list.slice() : DEFAULT_STAGES.slice();
+  state.examStages = data.examStages ? data.examStages.list.slice() : DEFAULT_EXAM_STAGES.slice();
 }
 function commit() {
   if (!writeLS(LS.data, data)) toast('이 기기에 저장하지 못했습니다. 브라우저 저장 공간을 확인하세요.');
@@ -731,8 +798,8 @@ function removeCompany(id) {
   data.deleted[id] = Date.now();
   commit();
 }
-function putStages(list) {
-  data.stages = { list: list.slice(), t: Date.now() };
+function putStages(list, type) {
+  data[type === 'exam' ? 'examStages' : 'stages'] = { list: list.slice(), t: Date.now() };
   commit();
 }
 const canWrite = () => true;
@@ -849,7 +916,7 @@ function cleanCfg(repo, token) {
 function applyCfg(next) {
   cfg = next;
   writeLS(LS.cfg, cfg);
-  meta = { sha: null, etag: null, dirty: Object.keys(data.companies).length > 0 || !!data.stages || Object.keys(data.deleted).length > 0 };
+  meta = { sha: null, etag: null, dirty: Object.keys(data.companies).length > 0 || !!data.stages || !!data.examStages || Object.keys(data.deleted).length > 0 };
   writeLS(LS.meta, meta);
   sync.error = null; sync.offline = false; sync.holdUntil = 0; sync.repoChecked = false;
   renderAll();
@@ -982,19 +1049,19 @@ const isOpen = (id) => !$(id).hidden;
 
 /* ---------- 채용 단계 색 ---------- */
 function kind(stage) {
-  if (stage.includes('지원')) return 'k-apply';
+  if (stage.includes('지원') || stage.includes('원서') || stage.includes('접수')) return 'k-apply';
   if (stage.includes('서류')) return 'k-doc';
   if (stage.includes('필기') || stage.includes('시험')) return 'k-exam';
-  if (stage.includes('면접')) return 'k-interview';
+  if (stage.includes('면접') || stage.includes('실기')) return 'k-interview';
   if (stage.includes('최종') || stage.includes('임용')) return 'k-final';
   return 'k-default';
 }
 function finalDate(c) {
-  const ds = Object.keys(c.schedules).filter((d) => c.schedules[d] === '최종 발표').sort();
+  const ds = Object.keys(c.schedules).filter((d) => isFinalStage(c.schedules[d])).sort();
   return ds.length ? ds[0] : null;
 }
 /* 진행 기간: 지원일(지원 단계의 첫날) ~ 최종 발표일. 지원일이나 최종 발표일이 없으면 막대를 그리지 않는다. */
-const isApplyStage = (st) => st.includes('지원');
+const isApplyStage = (st) => st.includes('지원') || st.includes('원서') || st.includes('접수');
 const isFinalStage = (st) => st.includes('최종') && st.includes('발표');
 function progressSpan(c) {
   const all = Object.keys(c.schedules).sort();
@@ -1017,11 +1084,15 @@ function hireDate(c) {
   const ds = Object.keys(c.schedules).filter((d) => isHireStage(c.schedules[d])).sort();
   return ds.length ? ds[ds.length - 1] : null;
 }
-function isFinished(c) { const d = hireDate(c); return !!d && d < todayStr(); }
+function isFinished(c) {
+  if (c.type === 'exam') return Object.keys(c.results).some((d) => c.schedules[d] && isFinalStage(c.schedules[d]));
+  const d = hireDate(c); return !!d && d < todayStr();
+}
 const inTable = (c) => !c.hidden && !isFinished(c);
 
 /* ---------- 합격/불합격 ---------- */
 function resultButtons(c, date) {
+  if (c.type === 'exam') return examResultButton(c, date);
   const r = c.results[date];
   const mk = (val, label) => h('button', {
     type: 'button', class: 'res ' + val, 'aria-pressed': String(r === val), disabled: !canWrite(),
@@ -1044,6 +1115,63 @@ function setResult(id, date, val) {
   }
 }
 
+/* ---------- 시험 결과 입력 ---------- */
+function examResultView(res) {
+  const score = res.u ? '확인 불가' : res.s;
+  return [
+    res.r !== 'none' ? h('span', { class: 'chip-res ' + res.r }, res.r === 'pass' ? '합격' : '불합격') : null,
+    score ? h('span', { class: 'res-score' + (res.u ? ' unknown' : '') }, (res.r === 'none' && !res.u ? '점수 ' : '') + score) : null,
+  ];
+}
+function examResultButton(c, date) {
+  const res = c.results[date];
+  const open = (ev) => { ev.stopPropagation(); openResult(c.id, date); };
+  return h('div', { class: 'result' }, res && typeof res === 'object'
+    ? h('button', { type: 'button', class: 'res-done', title: '결과 고치기', onclick: open }, examResultView(res))
+    : h('button', { type: 'button', class: 'res-entry', onclick: open }, '결과 입력'));
+}
+let resultTarget = null;
+function openResult(id, date) {
+  const c = findCompany(id);
+  if (!c) return;
+  resultTarget = { id, date };
+  const res = typeof c.results[date] === 'object' ? c.results[date] : null;
+  $('result-title').textContent = `${c.name} 결과 입력`;
+  $('result-sub').textContent = `${c.schedules[date] || '발표'} · ${showDateLong(date)}`;
+  document.querySelectorAll('input[name="result-kind"]').forEach((x) => { x.checked = !!res && x.value === res.r; });
+  $('result-score').value = res && !res.u ? res.s : '';
+  $('result-unknown').checked = !!(res && res.u);
+  $('result-score').disabled = $('result-unknown').checked;
+  $('result-error').hidden = true;
+  $('btn-result-clear').hidden = !res;
+  $('modal-result').hidden = false;
+  lockBody();
+}
+function applyExamResult(cur, date, res) {
+  const before = cloneCompany(cur);
+  const c = cloneCompany(cur);
+  if (res) c.results[date] = res; else delete c.results[date];
+  const failed = Object.values(c.results).some((x) => resultKind(x) === 'fail');
+  if (res && res.r === 'fail') c.hidden = true;
+  else if (!failed) c.hidden = false;
+  putCompany(c);
+  if (inTable(before) && !inTable(c)) {
+    toast(c.hidden ? `‘${c.name}’을(를) 불합격으로 표에서 숨겼습니다. 결과 기록에서 볼 수 있습니다.`
+                   : `‘${c.name}’ 최종 결과를 입력해서 결과 기록으로 옮겼습니다.`, '되돌리기', () => putCompany(before));
+  } else toast(res ? '결과를 저장했습니다.' : '결과를 지웠습니다.');
+}
+function saveResult() {
+  const t = resultTarget, cur = t && findCompany(t.id);
+  if (!cur) return;
+  const err = (m) => { $('result-error').textContent = m; $('result-error').hidden = false; };
+  const kindEl = document.querySelector('input[name="result-kind"]:checked');
+  if (!kindEl) return err('합격, 불합격, 점수만 중 하나를 고르세요.');
+  const u = $('result-unknown').checked, sc = $('result-score').value.trim();
+  if (!u && !sc) { $('result-score').focus(); return err('점수를 입력하거나 ‘확인 불가’를 체크하세요.'); }
+  closeModal('modal-result');
+  applyExamResult(cur, t.date, { r: kindEl.value, s: u ? '' : sc.slice(0, 40), u });
+}
+
 /* ---------- 표 ---------- */
 const mqPhone = window.matchMedia('(max-width: 640px)');   // 폰 폭에서는 표를 뒤집는다: 기업이 열, 날짜가 행
 function renderTable() {
@@ -1051,8 +1179,8 @@ function renderTable() {
   const visible = state.companies.filter(inTable);
   if (!state.loaded || !visible.length) {
     wrap.hidden = true; empty.hidden = false;
-    if (state.companies.length) empty.replaceChildren(h('strong', null, '표에 보이는 기업이 없습니다'), '불합격으로 표시했거나 임용일이 지난 기업은 결과 기록에서 볼 수 있습니다.');
-    else empty.replaceChildren(h('strong', null, '아직 등록한 기업이 없습니다'), '위 칸에 기업명과 직무를 입력해 첫 일정을 추가하세요. 노트북에서 쓰던 기록은 ‘기록 가져오기’로 옮길 수 있습니다.');
+    if (state.companies.length) empty.replaceChildren(h('strong', null, '표에 보이는 일정이 없습니다'), '불합격이거나 임용일이 지난 채용, 최종 결과를 입력한 시험은 결과 기록에서 볼 수 있습니다.');
+    else empty.replaceChildren(h('strong', null, '아직 등록한 일정이 없습니다'), '위에서 채용이나 시험을 고르고 이름을 입력해 첫 일정을 추가하세요.');
     return;
   }
   empty.hidden = true; wrap.hidden = false;
@@ -1079,7 +1207,7 @@ function renderTable() {
   };
   const companyCell = (tag, c) => h(tag, tag === 'th' ? { scope: 'col' } : null,
     h('button', { type: 'button', class: 'co-name', onclick: () => openSchedule(c.id) }, c.name),
-    h('div', { class: 'co-job' }, c.job));
+    h('div', { class: 'co-job' }, subLabel(c)));
   const spans = new Map(visible.map((c) => [c.id, progressSpan(c)]));
   const barPiece = (sp, ds) => {
     if (!sp || ds < sp.start || ds > sp.end) return null;
@@ -1095,7 +1223,7 @@ function renderTable() {
   const barLabel = (sp, ds) => {
     if (!sp || ds !== sp.labelAt) return null;
     const x = ds === sp.start && ds !== today ? 50 : ds === sp.end && ds !== today ? 50 : 50;
-    return h('span', { class: 'pbar-label', style: `--x:${x}%`, title: `지원일 ${showDate(sp.start)} ~ 최종 발표 ${showDate(sp.end)}` }, sp.pct + '%');
+    return h('span', { class: 'pbar-label', style: `--x:${x}%`, title: `시작 ${showDate(sp.start)} ~ 최종 발표 ${showDate(sp.end)}` }, sp.pct + '%');
   };
   const stageCell = (c, ds) => {
     const sp = spans.get(c.id);
@@ -1129,7 +1257,7 @@ function renderTable() {
     return;
   }
   wrap.style.maxHeight = '';
-  headRow.replaceChildren(h('th', { scope: 'col' }, '기업/직무'), ...dates.map((ds) => dateCell(ds, 'col')));
+  headRow.replaceChildren(h('th', { scope: 'col' }, '채용·시험'), ...dates.map((ds) => dateCell(ds, 'col')));
   companies.forEach((c) => {
     const tr = h('tr', { class: spans.get(c.id) ? 'has-bar' : null }, companyCell('td', c));
     dates.forEach((ds) => tr.append(stageCell(c, ds)));
@@ -1204,7 +1332,7 @@ function renderDayPanel() {
       h('span', { class: 'badge ' + kind(stage) }, stage),
       h('div', { class: 'who' },
         h('button', { type: 'button', class: 'co-name', onclick: () => openSchedule(c.id) }, c.name),
-        h('div', { class: 'co-job' }, c.job + (c.hidden ? ' · 표에서 숨김' : isFinished(c) ? ' · 임용 완료' : ''))),
+        h('div', { class: 'co-job' }, subLabel(c), c.hidden ? ' · 표에서 숨김' : isFinished(c) ? (c.type === 'exam' ? ' · 최종 결과 입력됨' : ' · 임용 완료') : '')),
       stage.includes('발표') ? resultButtons(c, ds) : null));
   });
 }
@@ -1232,17 +1360,30 @@ function goToday() {
 }
 
 /* ---------- 기업 추가·삭제 ---------- */
+function setAddType(type) {
+  state.addType = type;
+  $('type-job').setAttribute('aria-pressed', String(type === 'job'));
+  $('type-exam').setAttribute('aria-pressed', String(type === 'exam'));
+  const nameEl = $('input-company');
+  nameEl.placeholder = type === 'exam' ? '시험명 (예: 정보처리기사)' : '기업명 (예: A기업)';
+  nameEl.setAttribute('aria-label', type === 'exam' ? '시험명' : '기업명');
+  nameEl.setAttribute('enterkeyhint', type === 'exam' ? 'done' : 'next');
+  $('input-job').hidden = type === 'exam';
+  $('btn-add').textContent = type === 'exam' ? '시험 추가' : '기업 및 직무 추가';
+}
 function addCompany(ev) {
   ev.preventDefault();
   if (!canWrite()) return;
+  const type = state.addType;
   const nameEl = $('input-company'), jobEl = $('input-job');
-  const name = nameEl.value.trim(), job = jobEl.value.trim();
-  if (!name || !job) {
+  const name = nameEl.value.trim(), job = type === 'exam' ? '' : jobEl.value.trim();
+  if (type === 'exam' && !name) { toast('시험명을 입력하세요.'); nameEl.focus(); return; }
+  if (type === 'job' && (!name || !job)) {
     toast('기업명과 직무를 모두 입력하세요.');
     (name ? jobEl : nameEl).focus();
     return;
   }
-  const c = { id: newId(), name, job, hidden: false, schedules: {}, results: {}, createdAt: Date.now() };
+  const c = { id: newId(), type, name, job, hidden: false, schedules: {}, results: {}, createdAt: Date.now() };
   nameEl.value = ''; jobEl.value = '';
   nameEl.blur(); jobEl.blur();
   putCompany(c);
@@ -1251,7 +1392,7 @@ function addCompany(ev) {
 async function deleteCompany(id) {
   const c = findCompany(id);
   if (!c || !canWrite()) return false;
-  const ok = await askConfirm(`‘${c.name} (${c.job})’ 기록을 삭제할까요? 결과 기록에서도 완전히 지워집니다.`, '삭제');
+  const ok = await askConfirm(`‘${fullName(c)}’ 기록을 삭제할까요? 결과 기록에서도 완전히 지워집니다.`, '삭제');
   if (!ok) return false;
   removeCompany(id);
   return true;
@@ -1263,7 +1404,8 @@ function openSchedule(id) {
   if (!c) return;
   state.targetId = id;
   const year = new Date().getFullYear();
-  $('schedule-title').textContent = `${c.name} (${c.job}) 일정 설정`;
+  $('schedule-title').textContent = `${fullName(c)} 일정 설정`;
+  const stages = stagesFor(c);
   $('schedule-error').hidden = true;
   $('btn-save-schedule').disabled = !canWrite();
   $('btn-delete-company').disabled = !canWrite();
@@ -1272,8 +1414,8 @@ function openSchedule(id) {
   Object.keys(c.schedules).sort().forEach((d) => { (byStage[c.schedules[d]] = byStage[c.schedules[d]] || []).push(d); });
   const list = $('schedule-list');
   list.replaceChildren();
-  if (!state.stages.length) list.append(h('p', { class: 'muted' }, '채용 단계가 없습니다. ‘채용 단계 편집’에서 먼저 단계를 추가하세요.'));
-  state.stages.forEach((st, i) => {
+  if (!stages.length) list.append(h('p', { class: 'muted' }, '단계가 없습니다. ‘단계 편집’에서 먼저 단계를 추가하세요.'));
+  stages.forEach((st, i) => {
     const ds = byStage[st] || [];
     const isRange = ds.length > 1;
     const startVal = ds.length ? showDate(ds[0]) : '';
@@ -1308,7 +1450,7 @@ function saveSchedule() {
   let bad = null;
   const flag = (el, msg) => { el.classList.add('invalid'); if (!bad) { bad = msg; el.focus(); } };
   document.querySelectorAll('#schedule-list input.invalid').forEach((el) => el.classList.remove('invalid'));
-  state.stages.forEach((st, i) => {
+  stagesFor(cur).forEach((st, i) => {
     if (!$(`range-toggle-${i}`).checked) {
       const el = $(`date-single-${i}`), v = parseInput(el.value);
       if (v === null) flag(el, `‘${st}’ 날짜 형식을 확인하세요. 예: 10.07 또는 2027.01.15`);
@@ -1336,20 +1478,29 @@ function saveSchedule() {
   putCompany(c);
 }
 
-/* ---------- 채용 단계 편집 ---------- */
+/* ---------- 단계 편집 (채용 / 시험) ---------- */
+const tabStages = () => (state.stageTab === 'exam' ? state.examStages : state.stages);
+function setStageTab(type) {
+  state.stageTab = type;
+  $('stab-job').setAttribute('aria-pressed', String(type === 'job'));
+  $('stab-exam').setAttribute('aria-pressed', String(type === 'exam'));
+  $('input-new-stage').placeholder = type === 'exam' ? '새 시험 단계 이름' : '새 채용 단계 이름';
+  renderStages(true);
+}
 function renderStages(force) {
   const list = $('stages-list');
   if (!force && list.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;
   list.replaceChildren();
-  if (!state.stages.length) list.append(h('p', { class: 'muted' }, '채용 단계가 없습니다. 위에서 추가하세요.'));
+  const stages = tabStages();
+  if (!stages.length) list.append(h('p', { class: 'muted' }, '단계가 없습니다. 위에서 추가하세요.'));
   const off = !canWrite();
-  state.stages.forEach((st, i) => {
+  stages.forEach((st, i) => {
     const input = h('input', { type: 'text', id: `stage-input-${i}`, value: st, 'aria-label': `${st} 단계 이름`,
       onkeydown: (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); renameStage(i); } } });
     list.append(h('div', { class: 'stage-item' }, input,
       h('button', { type: 'button', class: 'sm', disabled: off, onclick: () => renameStage(i) }, '수정'),
       h('button', { type: 'button', class: 'sm', disabled: off || i === 0, 'aria-label': '위로', onclick: () => moveStage(i, -1) }, '▲'),
-      h('button', { type: 'button', class: 'sm', disabled: off || i === state.stages.length - 1, 'aria-label': '아래로', onclick: () => moveStage(i, 1) }, '▼'),
+      h('button', { type: 'button', class: 'sm', disabled: off || i === stages.length - 1, 'aria-label': '아래로', onclick: () => moveStage(i, 1) }, '▼'),
       h('button', { type: 'button', class: 'sm danger', disabled: off, onclick: () => deleteStage(i) }, '삭제')));
   });
 }
@@ -1358,21 +1509,22 @@ function addStage(ev) {
   if (!canWrite()) return;
   const input = $('input-new-stage'), v = input.value.trim();
   if (!v) return;
-  if (state.stages.includes(v)) { toast('같은 이름의 단계가 이미 있습니다.'); return; }
+  if (tabStages().includes(v)) { toast('같은 이름의 단계가 이미 있습니다.'); return; }
   input.value = '';
-  putStages(state.stages.concat(v));
+  putStages(tabStages().concat(v), state.stageTab);
   renderStages(true);
 }
 function renameStage(i) {
   if (!canWrite()) return;
+  const type = state.stageTab, stages = tabStages();
   const el = $(`stage-input-${i}`);
-  const name = el.value.trim(), old = state.stages[i];
+  const name = el.value.trim(), old = stages[i];
   if (!name || name === old) { el.value = old; el.blur(); return; }
-  if (state.stages.includes(name)) { toast('같은 이름의 단계가 이미 있습니다.'); return; }
-  const affected = state.companies.filter((c) => Object.values(c.schedules).includes(old)).map(cloneCompany);
-  const list = state.stages.slice(); list[i] = name;
+  if (stages.includes(name)) { toast('같은 이름의 단계가 이미 있습니다.'); return; }
+  const affected = state.companies.filter((c) => (c.type || 'job') === type && Object.values(c.schedules).includes(old)).map(cloneCompany);
+  const list = stages.slice(); list[i] = name;
   el.blur();
-  putStages(list);
+  putStages(list, type);
   affected.forEach((c) => {
     for (const d of Object.keys(c.schedules)) if (c.schedules[d] === old) c.schedules[d] = name;
     putCompany(c);
@@ -1381,20 +1533,20 @@ function renameStage(i) {
   toast(`단계 이름을 바꿨습니다: ${old} → ${name}`);
 }
 function moveStage(i, dir) {
-  const j = i + dir;
-  if (!canWrite() || j < 0 || j >= state.stages.length) return;
-  const list = state.stages.slice();
+  const j = i + dir, stages = tabStages();
+  if (!canWrite() || j < 0 || j >= stages.length) return;
+  const list = stages.slice();
   [list[i], list[j]] = [list[j], list[i]];
-  putStages(list);
+  putStages(list, state.stageTab);
   renderStages(true);
 }
 function deleteStage(i) {
   if (!canWrite()) return;
-  const before = state.stages.slice();
+  const type = state.stageTab, before = tabStages().slice();
   const list = before.slice(); const [gone] = list.splice(i, 1);
-  putStages(list);
+  putStages(list, type);
   renderStages(true);
-  toast(`‘${gone}’ 단계를 삭제했습니다.`, '되돌리기', () => { putStages(before); renderStages(true); });
+  toast(`‘${gone}’ 단계를 삭제했습니다.`, '되돌리기', () => { putStages(before, type); renderStages(true); });
 }
 
 /* ---------- 결과 기록 ---------- */
@@ -1403,117 +1555,79 @@ function shortDate(ds) {
   const base = y !== String(new Date().getFullYear()) ? `${y.slice(2)}.${Number(m)}.${Number(d)}` : `${Number(m)}.${Number(d)}`;
   return `${base} (${WEEK[parseYmd(ds).getDay()]})`;
 }
-function resultStages() {
-  const list = state.stages.filter((st) => st.includes('발표'));
-  state.companies.forEach((c) => Object.keys(c.results).forEach((d) => {
-    const st = c.schedules[d];
-    if (st && !list.includes(st)) list.push(st);
-  }));
+function resultStages(type) {
+  const list = (type === 'exam' ? state.examStages : state.stages).filter((st) => st.includes('발표'));
+  state.companies.forEach((c) => {
+    if ((c.type || 'job') !== type) return;
+    Object.keys(c.results).forEach((d) => {
+      const st = c.schedules[d];
+      if (st && !list.includes(st)) list.push(st);
+    });
+  });
   return list;
 }
+function setResultTab(type) {
+  state.resultTab = type;
+  $('rtab-job').setAttribute('aria-pressed', String(type === 'job'));
+  $('rtab-exam').setAttribute('aria-pressed', String(type === 'exam'));
+  renderResults();
+}
 function renderResults() {
+  const type = state.resultTab, isExam = type === 'exam';
   const box = $('results-list');
   box.replaceChildren();
-  const stages = resultStages();
-  const rows = state.companies.map((c) => {
+  const stages = resultStages(type);
+  const rows = state.companies.filter((c) => (c.type || 'job') === type).map((c) => {
     const by = {}; let last = null;
     Object.keys(c.results).sort().forEach((d) => {
       const st = c.schedules[d];
       if (!st) return;
-      by[st] = { r: c.results[d], d };
+      by[st] = { v: c.results[d], d };
       if (!last || d > last) last = d;
     });
-    const hire = isFinished(c) ? hireDate(c) : null;
+    const hire = !isExam && isFinished(c) ? hireDate(c) : null;
     if (hire && (!last || hire > last)) last = hire;
     return last ? { c, by, last, hire } : null;
   }).filter(Boolean).sort((a, b) => b.last.localeCompare(a.last) || a.c.name.localeCompare(b.c.name));
   if (!rows.length) {
-    box.append(h('p', { class: 'muted' }, '아직 결과가 나온 기업이 없습니다. 발표 일정에서 합격·불합격을 누르거나 임용일이 지나면 여기에 모입니다.'));
+    box.append(h('p', { class: 'muted' }, isExam
+      ? '아직 결과를 입력한 시험이 없습니다. 표나 캘린더에서 결과 발표 일정의 ‘결과 입력’을 누르면 여기에 모입니다.'
+      : '아직 결과가 나온 채용이 없습니다. 발표 일정에서 합격·불합격을 누르거나 임용일이 지나면 여기에 모입니다.'));
     return;
   }
   const hires = rows.filter((r) => r.hire);
-  const label = (st) => st.replace(/\s*발표$/, '') || st;
+  const label = (st) => st.replace(/\s*(결과\s*)?발표$/, '') || st;
   box.append(h('div', { class: 'res-summary' }, stages.map((st) => {
-    const pass = rows.filter((r) => r.by[st] && r.by[st].r === 'pass').length;
-    const fail = rows.filter((r) => r.by[st] && r.by[st].r === 'fail').length;
+    const count = (k) => rows.filter((r) => r.by[st] && resultKind(r.by[st].v) === k).length;
+    const only = isExam ? count('none') : 0;
     return h('div', { class: 'res-sum' },
       h('span', null, h('span', { class: 'badge ' + kind(st) }, label(st))),
-      h('span', { class: 'nums' }, '합격 ', h('b', null, pass), ' · 불합격 ', h('b', null, fail)));
+      h('span', { class: 'nums' }, '합격 ', h('b', null, count('pass')), ' · 불합격 ', h('b', null, count('fail')),
+        only ? [' · 점수만 ', h('b', null, only)] : null));
   }), hires.length ? h('div', { class: 'res-sum' },
     h('span', null, h('span', { class: 'badge k-final' }, '임용')),
     h('span', { class: 'nums' }, '임용 완료 ', h('b', null, hires.length))) : null));
+  const cellFor = (r, st) => {
+    const it = r.by[st];
+    if (!it) return h('span', { class: 'dash', 'aria-label': '결과 없음' }, '–');
+    const body = typeof it.v === 'object'
+      ? examResultView(it.v)
+      : h('span', { class: 'chip-res ' + it.v }, it.v === 'pass' ? '합격' : '불합격');
+    return h('div', { class: 'res-cell' }, h('span', { class: 'res-date' }, shortDate(it.d)), body);
+  };
   box.append(h('div', { class: 'res-wrap' }, h('table', { class: 'res-table' },
     h('thead', null, h('tr', null,
-      h('th', { scope: 'col' }, '기업/직무'),
+      h('th', { scope: 'col' }, isExam ? '시험' : '기업/직무'),
       stages.map((st) => h('th', { scope: 'col' }, label(st))),
       hires.length ? h('th', { scope: 'col' }, '임용') : null)),
     h('tbody', null, rows.map((r) => h('tr', null,
       h('td', null,
         h('button', { type: 'button', class: 'co-name', onclick: () => { closeModal('modal-results'); openSchedule(r.c.id); } }, r.c.name),
-        h('div', { class: 'co-job' }, r.c.job)),
-      stages.map((st) => h('td', null, r.by[st]
-        ? h('div', { class: 'res-cell' },
-            h('span', { class: 'res-date' }, shortDate(r.by[st].d)),
-            h('span', { class: 'chip-res ' + r.by[st].r }, r.by[st].r === 'pass' ? '합격' : '불합격'))
-        : h('span', { class: 'dash', 'aria-label': '결과 없음' }, '–'))),
+        isExam ? null : h('div', { class: 'co-job' }, r.c.job)),
+      stages.map((st) => h('td', null, cellFor(r, st))),
       hires.length ? h('td', null, r.hire
         ? h('div', { class: 'res-cell' }, h('span', { class: 'res-date' }, shortDate(r.hire)), h('span', { class: 'chip-res hire' }, '임용'))
         : h('span', { class: 'dash', 'aria-label': '임용 전' }, '–')) : null))))));
-}
-
-/* ---------- 기록 가져오기 ---------- */
-let importData = null;
-function readImport(text) {
-  text = (text || '').trim();
-  if (!text) return { error: '' };
-  let raw;
-  try { raw = JSON.parse(text); } catch (e) { return { error: '붙여넣은 내용을 읽을 수 없습니다. 내보내기 화면에서 전체를 다시 복사해 주세요.' }; }
-  const unwrap = (v) => { if (typeof v === 'string') { try { return JSON.parse(v); } catch (e) { return null; } } return v; };
-  let companies = null, stages = null;
-  if (Array.isArray(raw)) companies = raw;
-  else if (raw && typeof raw === 'object') {
-    companies = unwrap(raw.companies !== undefined ? raw.companies : raw.rec_companies);
-    stages = unwrap(raw.stages !== undefined ? raw.stages : raw.rec_stages);
-  }
-  const outC = [];
-  const seen = new Set();
-  if (Array.isArray(companies)) companies.forEach((x) => {
-    if (!x || typeof x !== 'object') return;
-    let id = typeof x.id === 'string' && ID_OK.test(x.id) && x.id !== '.' && x.id !== '..' ? x.id : newId();
-    while (seen.has(id)) id = newId();
-    seen.add(id);
-    const c = normalizeCompany(id, x);
-    if (c.name || c.job || Object.keys(c.schedules).length) outC.push(c);
-  });
-  const outS = cleanStages(stages);
-  if (!outC.length && !(outS && outS.length)) return { error: '가져올 기록을 찾지 못했습니다.' };
-  return { companies: outC, stages: outS && outS.length ? outS : null };
-}
-function onImportInput() {
-  const r = readImport($('import-text').value);
-  const status = $('import-status');
-  if (r.error !== undefined) {
-    importData = null;
-    status.textContent = r.error;
-    status.className = r.error ? 'err' : 'hint';
-  } else {
-    importData = r;
-    status.className = 'hint';
-    status.textContent = `기업 ${r.companies.length}개` + (r.stages ? `, 채용 단계 ${r.stages.length}개` : '') + '를 가져옵니다.';
-  }
-  $('btn-do-import').disabled = !importData || !canWrite();
-}
-function doImport() {
-  if (!importData || !canWrite()) return;
-  const { companies, stages } = importData;
-  if (stages) putStages(stages);
-  companies.forEach(putCompany);
-  importData = null;
-  $('import-text').value = '';
-  onImportInput();
-  closeModal('modal-import');
-  toast(`기업 ${companies.length}개를 가져왔습니다.`);
-  requestAnimationFrame(scrollToToday);
 }
 
 /* ---------- 전체 그리기 ---------- */
@@ -1526,13 +1640,13 @@ function renderNotice() {
 }
 function renderAll() {
   $('btn-add').disabled = false;
-  $('btn-do-import').disabled = !importData;
   renderNotice();
   renderTable();
   if (state.view === 'calendar') renderCalendar();
   if (isOpen('modal-results')) renderResults();
   if (isOpen('modal-stages')) renderStages(false);
   if (isOpen('modal-schedule') && state.targetId && !findCompany(state.targetId)) closeModal('modal-schedule');
+  if (isOpen('modal-result') && resultTarget && !findCompany(resultTarget.id)) closeModal('modal-result');
   updateSync();
 }
 
@@ -1543,6 +1657,26 @@ $('btn-view-calendar').addEventListener('click', () => switchView('calendar'));
 $('btn-today').addEventListener('click', goToday);
 $('btn-stages').addEventListener('click', () => openModal('modal-stages'));
 $('btn-results').addEventListener('click', () => openModal('modal-results'));
+$('type-job').addEventListener('click', () => setAddType('job'));
+$('type-exam').addEventListener('click', () => setAddType('exam'));
+$('stab-job').addEventListener('click', () => setStageTab('job'));
+$('stab-exam').addEventListener('click', () => setStageTab('exam'));
+$('rtab-job').addEventListener('click', () => setResultTab('job'));
+$('rtab-exam').addEventListener('click', () => setResultTab('exam'));
+$('btn-result-save').addEventListener('click', saveResult);
+$('btn-result-clear').addEventListener('click', () => {
+  const t = resultTarget, cur = t && findCompany(t.id);
+  if (!cur) return;
+  closeModal('modal-result');
+  applyExamResult(cur, t.date, null);
+});
+$('result-unknown').addEventListener('change', (ev) => {
+  $('result-score').disabled = ev.target.checked;
+  if (ev.target.checked) $('result-score').value = '';
+  $('result-error').hidden = true;
+});
+$('result-score').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); saveResult(); } });
+document.querySelectorAll('input[name="result-kind"]').forEach((x) => x.addEventListener('change', () => { $('result-error').hidden = true; }));
 $('btn-restore-company').addEventListener('click', () => {
   const c = findCompany(state.targetId);
   if (!c) return;
@@ -1551,7 +1685,6 @@ $('btn-restore-company').addEventListener('click', () => {
   $('btn-restore-company').hidden = true;
   toast(`‘${c.name}’을(를) 표에 다시 보이게 했습니다.`);
 });
-$('btn-import').addEventListener('click', () => { openModal('modal-import'); onImportInput(); });
 $('btn-prev').addEventListener('click', () => changeMonth(-1));
 $('btn-next').addEventListener('click', () => changeMonth(1));
 $('form-add').addEventListener('submit', addCompany);
@@ -1563,8 +1696,6 @@ $('btn-delete-company').addEventListener('click', async () => {
   if (id && await deleteCompany(id)) closeModal('modal-schedule');
 });
 $('schedule-list').addEventListener('input', (ev) => { ev.target.classList.remove('invalid'); $('schedule-error').hidden = true; });
-$('import-text').addEventListener('input', onImportInput);
-$('btn-do-import').addEventListener('click', doImport);
 $('confirm-ok').addEventListener('click', () => closeConfirm(true));
 $('confirm-cancel').addEventListener('click', () => closeConfirm(false));
 document.querySelectorAll('.overlay').forEach((ov) => {
